@@ -1,0 +1,507 @@
+---
+title: "Coach Project"
+author: "Peyton Lindogan"
+date: "2023-06-20"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+library(rvest)
+library(tidyverse)
+library(dplyr)
+#install.packages("Rcpp", dependencies = TRUE)
+#install.packages("devtools")
+library(devtools)
+library(stringr)
+#devtools::install_github("abresler/nbastatR") 
+# come back to for analysis later
+library(tidyr)
+#install.packages("curl")
+library(curl)
+#install.packages("httr")
+library(httr)
+library(readr)
+library(magrittr)
+```
+
+Actual scraping
+
+
+```{r}
+#scraping each year through 2000
+COACHES_PY = data.frame()
+for (page_result2 in seq(from = 1994, to = 2023, by = 1)){
+link = paste0("https://www.basketball-reference.com/leagues/NBA_",
+    page_result2, "_coaches.html")
+#delay
+#if(page_result %% 1 == 0) {Sys.sleep(10)}
+page = read_html(link)
+#season
+season = page %>%
+  html_nodes("#meta span:nth-child(1)") %>%
+  html_text()
+
+Coach_name = page %>%
+  html_nodes("tbody th") %>%
+  html_text()
+Coach_team = page %>%
+  html_nodes("td.left") %>%
+  html_text()
+#number of seasons with the team
+Coach_seasons_team = page %>%
+  html_nodes(".iz+.center") %>%
+  html_text()
+#number of seasons as a head coach total
+HC_seasons_total = page %>%
+  html_nodes(".center+ td.center") %>%
+  html_text()
+#regular season measurements
+Coach_games_season = page %>%
+  html_nodes(".right:nth-child(7)") %>%
+  html_text()
+Coach_games_season_win = page %>%
+  html_nodes(".right:nth-child(8)") %>%
+  html_text()
+Coach_games_season_loss = page %>%
+  html_nodes(".right:nth-child(9)") %>%
+  html_text()
+Coach_games_career_HC = page %>%
+  html_nodes(".right:nth-child(13)") %>%
+  html_text()
+Coach_games_career_HC_win = page %>%
+  html_nodes(".right:nth-child(14)") %>%
+  html_text()
+Coach_games_career_HC_loss = page %>%
+  html_nodes(".right:nth-child(15)") %>%
+  html_text()
+Coach_games_career_HC_win_pct = page %>%
+  html_nodes(".right:nth-child(16)") %>%
+  html_text()
+#playoff measurements
+Coach_games_season_PO = page %>%
+  html_nodes(".right:nth-child(18)") %>%
+  html_text()
+Coach_games_season_PO_win = page %>%
+  html_nodes(".right:nth-child(19)") %>%
+  html_text()
+Coach_games_season_PO_loss = page %>%
+  html_nodes(".right:nth-child(20)") %>%
+  html_text()
+Coach_games_career_PO_HC = page %>%
+  html_nodes(".right:nth-child(24)") %>%
+  html_text()
+Coach_games_career_PO_HC_win = page %>%
+  html_nodes(".right:nth-child(25)") %>%
+  html_text()
+Coach_games_career_PO_HC_loss = page %>%
+  html_nodes(".right:nth-child(26)") %>%
+  html_text()
+
+COACHES_PY =rbind(COACHES_PY,data.frame(Coach_name,season, Coach_team,Coach_seasons_team,HC_seasons_total,Coach_games_season,Coach_games_season_win,Coach_games_season_loss,Coach_games_career_HC,Coach_games_career_HC_win,Coach_games_career_HC_loss,Coach_games_career_HC_win_pct,Coach_games_season_PO,Coach_games_season_PO_win,Coach_games_season_PO_loss,Coach_games_career_PO_HC_win,Coach_games_career_PO_HC_loss, stringsAsFactors=FALSE))
+
+print(paste("Page:", page_result2))
+}
+```
+
+```{r, include = FALSE}
+#scraping previous years data
+ADVANCED_PY = data.frame()
+for (page_result in seq(from = 1993, to = 2023, by = 1)){
+link2 = paste0("https://www.basketball-reference.com/leagues/NBA_",
+    page_result, ".html")
+page2 = read_html(link2, handle = curl::new_handle("useragent" = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36
+"))
+
+#team name
+team_name = page2 %>%
+  html_nodes("#advanced-team tbody th+ .left , #advanced-team .show_partial_when_sorting+ .center") %>%
+  html_text()
+#season
+season = page2 %>%
+  html_nodes("#meta span:nth-child(1)") %>%
+  html_text()
+#advanced stats
+avg_age = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(3) , #advanced-team .center:nth-child(3)") %>%
+  html_text()
+season_wins = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(4) , #advanced-team .poptip:nth-child(4)") %>%
+  html_text()
+season_losses = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(5) , #advanced-team .poptip:nth-child(5)") %>%
+  html_text()
+pythagorean_wins = page2 %>%
+  html_nodes("tr+ .right , #advanced-team tbody .right:nth-child(6) , #advanced-team .center:nth-child(6)") %>%
+  html_text()
+pythagorean_losses = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(7) , #advanced-team .center:nth-child(7)") %>%
+  html_text()
+MOV = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(8) , #advanced-team .center:nth-child(8)") %>%
+  html_text()
+Schedule_Strength = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(9) , #advanced-team .center:nth-child(9)") %>%
+  html_text()
+Simple_Rating_System = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(10) , #advanced-team .center:nth-child(10)") %>%
+  html_text()
+ORtg = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(11) , #advanced-team .center:nth-child(11)") %>%
+  html_text()
+DRtg = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(12) , #advanced-team .center:nth-child(12)") %>%
+  html_text()
+NRtg = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(13) , #advanced-team .center:nth-child(13)") %>%
+  html_text()
+Pace = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(14) , #advanced-team .center:nth-child(14)") %>%
+  html_text()
+FTr = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(15) , #advanced-team .center:nth-child(15)") %>%
+  html_text()
+ThreePAr = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(16) , #advanced-team .center:nth-child(16)") %>%
+  html_text()
+TS_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(17) , #advanced-team .center:nth-child(17)") %>%
+  html_text()
+O4F_eFG_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(19) , #advanced-team .center:nth-child(19)") %>%
+  html_text()
+O4F_TOV_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(20) , #advanced-team .center:nth-child(20)") %>%
+  html_text()
+O4F_ORB_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(21) , #advanced-team .center:nth-child(21)") %>%
+  html_text()
+O4F_FT_per_FGA = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(22) , #advanced-team .center:nth-child(22)") %>%
+  html_text()
+D4F_eFG_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(24) , #advanced-team .center:nth-child(24)") %>%
+  html_text()
+D4F_TOV_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(25) , #advanced-team .center:nth-child(25)") %>%
+  html_text()
+D4F_DRB_perc = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(26) , #advanced-team .center:nth-child(26)") %>%
+  html_text()
+D4F_FT_per_FGA = page2 %>%
+  html_nodes("#advanced-team tbody .right:nth-child(27) , #advanced-team tbody .right:nth-child(27) , #advanced-team .center:nth-child(27)") %>%
+  html_text()
+
+ADVANCED_PY = rbind(ADVANCED_PY, data.frame(team_name,season, avg_age, season_wins, season_losses, pythagorean_wins, pythagorean_losses, MOV, Schedule_Strength, Simple_Rating_System, ORtg, DRtg, NRtg, Pace, FTr, ThreePAr, TS_perc, O4F_eFG_perc, O4F_TOV_perc, O4F_ORB_perc, O4F_FT_per_FGA, D4F_eFG_perc, D4F_TOV_perc, D4F_DRB_perc, D4F_FT_per_FGA))
+
+print(paste("Page:", page_result))
+}
+```
+
+
+```{r, include = FALSE}
+#data formatting of advanced data
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"\\*","\\")
+
+#remove row
+#ADVANCED_PY = ADVANCED_PY[-1,]
+
+#remove asterisk
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"\\*","\\")
+#rename the years so that they can match
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1992-93","1993")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1993-94","1994")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1994-95","1995")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1995-96","1996")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1996-97","1997")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1997-98","1998")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1998-99","1999")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"1999-00","2000")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2000-01","2001")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2001-02","2002")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2002-03","2003")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2003-04","2004")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2004-05","2005")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2005-06","2006")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2006-07","2007")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2007-08","2008")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2008-09","2009")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2009-10","2010")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2010-11","2011")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2011-12","2012")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2012-13","2013")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2013-14","2014")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2014-15","2015")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2015-16","2016")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2016-17","2017")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2017-18","2018")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2018-19","2019")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2019-20","2020")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2020-21","2021")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2021-22","2022")
+ADVANCED_PY$season = str_replace(ADVANCED_PY$season,"2022-23","2023")
+ADVANCED_PY$season = as.factor(ADVANCED_PY$season)
+
+#replacing old team names
+#NJN is the New Jersey Nets but they will be called the brooklyn nets here because they rebranded in 2012
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"New Jersey Nets","Brooklyn Nets")
+#VAN is the Vancouver Grizzlies but they will be called the Memphis Grizzlies here because they rebranded in 2001
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"Vancouver Grizzlies","Memphis Grizzlies")
+#SEA is the seattle supersonics but they will be called the Oklahoma City Thunder here because they rebranded in 2008
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"Seattle SuperSonics","Oklahoma City Thunder")
+#NOH is the New Orleans Hornets but they will be called the New Orleans Pelicans here because they rebranded in 2013
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"New Orleans Hornets","New Orleans Pelicans")
+#WSB is the Washington Bullets but they will be called the Washington Wizards here because they rebranded in 1997
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"Washington Bullets","Washington Wizards")
+#WSB is the Washington Bullets but they will be called the Washington Wizards here because they rebranded in 1997
+ADVANCED_PY$team_name = str_replace(ADVANCED_PY$team_name,"Charlotte Bobcats","Charlotte Hornets")
+
+#delete repeat rows
+ADVANCED_PY = subset(ADVANCED_PY,team_name != "Team")
+
+#take CSV for ADVANCED
+write.csv(ADVANCED_PY,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\ADVANCED_Cleaning.csv", row.names=FALSE)
+
+```
+
+```{r}
+TEST_ADVANCED = read.csv("C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\ADVANCED_Cleaning.csv")
+#cheat the system
+team_name = rep(c("Atlanta Hawks","Boston Celtics", "Brooklyn Nets", "Charlotte Hornets", "Chicago Bulls", "Cleveland Cavaliers", "Dallas Mavericks", "Denver Nuggets", "Detroit Pistons", "Golden State Warriors", "Houston Rockets", "Indiana Pacers", "Los Angeles Clippers", "Los Angeles Lakers", "Memphis Grizzlies", "Miami Heat", "Milwaukee Bucks", "Minnesota Timberwolves", "New Orleans Pelicans", "New York Knicks", "Oklahoma City Thunder", "Orlando Magic", "Philadelphia 76ers", "Phoenix Suns", "Portland Trail Blazers", "Sacramento Kings", "San Antonio Spurs", "Toronto Raptors", "Utah Jazz", "Washington Wizards"), times = 31)
+season = rep(c(1993:2023), each = 30)
+CHEAT = data.frame(team_name, season)
+
+ADVANCED_MERGE = merge(CHEAT,TEST_ADVANCED, by = c("team_name", "season"), all.x = TRUE)
+
+
+# REPLACE LATER WITH ADVANCED_PY WHEN YOU CAN STEAL THE INFO 
+```
+
+```{r}
+#provide previous year data
+#provide a dataframe for breaking
+ADVANCED_BREAK = ADVANCED_MERGE
+
+#format all data types so you can force them backwards 
+ADVANCED_BREAK = ADVANCED_BREAK %>%
+  mutate(season_wins = as.numeric(season_wins)) %>%
+  mutate(season_losses = as.numeric(season_losses)) %>%
+  mutate(season = as.character(season), season = as.numeric(season)) %>%
+  mutate(team_name = as.character(team_name))
+
+ADVANCED_BREAK = ADVANCED_BREAK %>%
+  mutate(previous_season_win_pct = lag(season_wins,n=1)/(lag(season_wins,n=1) + lag(season_losses, n = 1)), previous_avg_age = lag(avg_age, n =1),previous_pythagorean_wins = lag(pythagorean_wins, n=1), previous_pythagorean_losses = lag(pythagorean_losses, n = 1), previous_MOV = lag(MOV,n=1), previous_Schedule_Strength = lag(Schedule_Strength,n = 1),previous_Simple_Rating_System = lag(Simple_Rating_System, n = 1), previous_ORtg = lag(ORtg,n=1), previous_DRtg = lag(DRtg, n=1), previous_NRtg = lag(NRtg, n=1), previous_Pace = lag(Pace,n=1), previous_FTr = lag(FTr, n = 1), previous_ThreePAr = lag(ThreePAr, n = 1), previous_TS_perc = lag(TS_perc, n = 1), previous_O4F_eFG_perc = lag(O4F_eFG_perc, n = 1),previous_O4F_TOV_perc = lag(O4F_TOV_perc, n = 1), previous_O4F_ORB_perc = lag(O4F_ORB_perc, n =1),previous_O4F_FT_per_FGA = lag(O4F_FT_per_FGA, n = 1), previous_D4F_DRB_perc = lag(D4F_DRB_perc, n = 1), previous_D4F_TOV_perc = lag(D4F_TOV_perc, n = 1), previous_D4F_eFG_perc = lag(D4F_eFG_perc), previous_D4F_FT_per_FGA = lag(D4F_FT_per_FGA, n = 1) )
+
+
+#remove last year bc it won't be there anymore later PLEASE
+#ADVANCED_BREAK = subset(ADVANCED_BREAK,season != "1993") 
+
+#save ADVANCED_BREAK
+write.csv(ADVANCED_BREAK,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\ADVANCED_MERGE", row.names=FALSE)
+
+```
+
+
+
+
+```{r, include = FALSE}
+#data formatting of coaching data
+
+# #remove row 2
+# COACHES2 = COACHES2[-1,]
+# #renaming column names
+# colnames(COACHES2) = c("Coach_Name","Team","Seasons_W_Team","Seasons_HC","RS_Games","RS_W","RS_L","Career_Games","Career_W","Career_L","Career_Percent","PO_Games","PO_W","PO_L","Career_PO_Games", "Career_PO_W", "Career_PO_L")
+# COACHES2$Coach_Name = as.character(COACHES2$Coach_Name)
+
+#COACHES2$Coach_Name = str_replace(COACHES2$Coach_Name,"\\*","\\")
+#delete repeat rows
+#COACHES3 = subset(COACHES2,Name != "" & Name != "Coach") 
+# filter only coaches with more than 30 games in the season
+COACHES_PY$Coach_games_season = as.numeric(COACHES_PY$Coach_games_season)
+is.numeric(COACHES_PY$Coach_games_season)
+COACHES3 = subset(COACHES_PY, Coach_games_season >= 30)
+
+#COACHES3$To = as.numeric(COACHES3$To)
+#COACHES3 = subset(COACHES3,To>=2000 & To<=2023)
+# change team names
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"MIN","Minnesota Timberwolves")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"HOU","Houston Rockets")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"CLE","Cleveland Cavaliers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"GSW","Golden State Warriors")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"CHI","Chicago Bulls")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"UTA","Utah Jazz")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"DAL","Dallas Mavericks")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"BKN","Brooklyn Nets")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"NYK","New York Knicks")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"PHI","Philadelphia 76ers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"SAS","San Antonio Spurs")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"SAC","Sacramento Kings")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"DEN","Denver Nuggets")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"MIL","Milwaukee Bucks")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"PHO","Phoenix Suns")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"ATL","Atlanta Hawks")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"BOS","Boston Celtics")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"MIA","Miami Heat")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"IND","Indiana Pacers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"OKC","Oklahoma City Thunder")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"CHA","Charlotte Hornets")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"MEM","Memphis Grizzlies")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"WAS","Washington Wizards")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"TOR","Toronto Raptors")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"LAC","Los Angeles Clippers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"LAL","Los Angeles Lakers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"ORL","Orlando Magic")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"POR","Portland Trail Blazers")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"NOP","New Orleans Pelicans")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"BRK","Brooklyn Nets")
+#replacing old team names
+#NJN is the New Jersey Nets but they will be called the brooklyn nets here because they rebranded in 2012
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"NJN","Brooklyn Nets")
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"DET","Detroit Pistons")
+#VAN is the Vancouver Grizzlies but they will be called the Memphis Grizzlies here because they rebranded in 2001
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"VAN","Memphis Grizzlies")
+#SEA is the seattle supersonics but they will be called the Oklahoma City Thunder here because they rebranded in 2008
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"SEA","Oklahoma City Thunder")
+#NOH is the New Orleans Hornets but they will be called the New Orleans Pelicans here because they rebranded in 2013
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"NOH","New Orleans Pelicans")
+#WSB is the Washington Bullets but they will be called the Washington Wizards here because they rebranded in 1997
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"WSB","Washington Wizards")
+#CHH is the same as the Charlotte Hornets
+COACHES3$Coach_team = str_replace(COACHES3$Coach_team,"CHH","Charlotte Hornets")
+as.character(COACHES3$Coach_name)
+as.character(COACHES3$season)
+as.factor(COACHES3$Coach_team)
+COACHES3 = COACHES3 %>%
+  mutate_at(-c(1,2,3), as.numeric)
+
+#edit years
+COACHES3$season = str_replace(COACHES3$season,"1993-94","1994")
+COACHES3$season = str_replace(COACHES3$season,"1994-95","1995")
+COACHES3$season = str_replace(COACHES3$season,"1995-96","1996")
+COACHES3$season = str_replace(COACHES3$season,"1996-97","1997")
+COACHES3$season = str_replace(COACHES3$season,"1997-98","1998")
+COACHES3$season = str_replace(COACHES3$season,"1998-99","1999")
+COACHES3$season = str_replace(COACHES3$season,"1999-00","2000")
+COACHES3$season = str_replace(COACHES3$season,"2000-01","2001")
+COACHES3$season = str_replace(COACHES3$season,"2001-02","2002")
+COACHES3$season = str_replace(COACHES3$season,"2002-03","2003")
+COACHES3$season = str_replace(COACHES3$season,"2003-04","2004")
+COACHES3$season = str_replace(COACHES3$season,"2004-05","2005")
+COACHES3$season = str_replace(COACHES3$season,"2005-06","2006")
+COACHES3$season = str_replace(COACHES3$season,"2006-07","2007")
+COACHES3$season = str_replace(COACHES3$season,"2007-08","2008")
+COACHES3$season = str_replace(COACHES3$season,"2008-09","2009")
+COACHES3$season = str_replace(COACHES3$season,"2009-10","2010")
+COACHES3$season = str_replace(COACHES3$season,"2010-11","2011")
+COACHES3$season = str_replace(COACHES3$season,"2011-12","2012")
+COACHES3$season = str_replace(COACHES3$season,"2012-13","2013")
+COACHES3$season = str_replace(COACHES3$season,"2013-14","2014")
+COACHES3$season = str_replace(COACHES3$season,"2014-15","2015")
+COACHES3$season = str_replace(COACHES3$season,"2015-16","2016")
+COACHES3$season = str_replace(COACHES3$season,"2016-17","2017")
+COACHES3$season = str_replace(COACHES3$season,"2017-18","2018")
+COACHES3$season = str_replace(COACHES3$season,"2018-19","2019")
+COACHES3$season = str_replace(COACHES3$season,"2019-20","2020")
+COACHES3$season = str_replace(COACHES3$season,"2020-21","2021")
+COACHES3$season = str_replace(COACHES3$season,"2021-22","2022")
+COACHES3$season = str_replace(COACHES3$season,"2022-23","2023")
+COACHES3$season = as.factor(COACHES3$season)
+
+#create dummy coaches dataframe
+COACHES2.5 = COACHES3
+#filter only first year head coaches
+COACHES3$Coach_seasons_team = as.numeric(COACHES3$Coach_seasons_team)
+is.numeric(COACHES3$Coach_seasons_team)
+COACHES3 = filter(COACHES3, Coach_seasons_team == 1)
+
+#rename coaches team
+COACHES3 = COACHES3 %>%
+  rename("team_name" = "Coach_team")
+COACHES3$team_name = as.factor(COACHES3$team_name)
+
+#output file
+write.csv(COACHES3,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Base.csv", row.names=FALSE)
+write.csv(COACHES2.5,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Base_Every_Coach.csv", row.names=FALSE)
+```
+
+
+```{r}
+COACH_DATA = read.csv("C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Base.csv")
+#joining ADVANCED and COACHES
+COACHES_COMBO = merge(COACH_DATA, ADVANCED_BREAK, by = c("season","team_name"))
+```
+```{r}
+COACH_DATA_ALL = read.csv("C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Base_Every_Coach.csv")
+COACH_DATA_ALL = COACH_DATA_ALL %>%
+  rename("team_name" = "Coach_team")
+#joining ADVANCED and COACHES
+COACHES_COMBO_ALL = merge(COACH_DATA_ALL, ADVANCED_BREAK, by = c("season","team_name"))
+```
+
+
+```{r}
+ODDS = read.csv("C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\NBA_RS_Odds.csv")
+
+ODDS$Season = str_replace(ODDS$Season,"1993-1994","1994")
+ODDS$Season = str_replace(ODDS$Season,"1994-1995","1995")
+ODDS$Season = str_replace(ODDS$Season,"1995-1996","1996")
+ODDS$Season = str_replace(ODDS$Season,"1996-1997","1997")
+ODDS$Season = str_replace(ODDS$Season,"1997-1998","1998")
+ODDS$Season = str_replace(ODDS$Season,"1998-1999","1999")
+ODDS$Season = str_replace(ODDS$Season,"1999-2000","2000")
+ODDS$Season = str_replace(ODDS$Season,"2000-2001","2001")
+ODDS$Season = str_replace(ODDS$Season,"2001-2002","2002")
+ODDS$Season = str_replace(ODDS$Season,"2002-2003","2003")
+ODDS$Season = str_replace(ODDS$Season,"2003-2004","2004")
+ODDS$Season = str_replace(ODDS$Season,"2004-2005","2005")
+ODDS$Season = str_replace(ODDS$Season,"2005-2006","2006")
+ODDS$Season = str_replace(ODDS$Season,"2006-2007","2007")
+ODDS$Season = str_replace(ODDS$Season,"2007-2008","2008")
+ODDS$Season = str_replace(ODDS$Season,"2008-2009","2009")
+ODDS$Season = str_replace(ODDS$Season,"2009-2010","2010")
+ODDS$Season = str_replace(ODDS$Season,"2010-2011","2011")
+ODDS$Season = str_replace(ODDS$Season,"2011-2012","2012")
+ODDS$Season = str_replace(ODDS$Season,"2012-2013","2013")
+ODDS$Season = str_replace(ODDS$Season,"2013-2014","2014")
+ODDS$Season = str_replace(ODDS$Season,"2014-2015","2015")
+ODDS$Season = str_replace(ODDS$Season,"2015-2016","2016")
+ODDS$Season = str_replace(ODDS$Season,"2016-2017","2017")
+ODDS$Season = str_replace(ODDS$Season,"2017-2018","2018")
+ODDS$Season = str_replace(ODDS$Season,"2018-2019","2019")
+ODDS$Season = str_replace(ODDS$Season,"2019-2020","2020")
+ODDS$Season = str_replace(ODDS$Season,"2020-2021","2021")
+ODDS$Season = str_replace(ODDS$Season,"2021-2022","2022")
+ODDS$Season = str_replace(ODDS$Season,"2022-2023","2023")
+ODDS$Season = as.factor(ODDS$Season)
+
+#rename variables (crying emoji)
+ODDS = ODDS %>%
+  rename("season" = "Season") %>%
+  rename("team_name" = "Team")
+COACHES_COMBO$seasons = as.factor(COACHES_COMBO$season)
+ODDS$season = as.factor(ODDS$season)
+
+#output file ODDS
+write.csv(ODDS,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\ODDS_Cleaned.csv", row.names=FALSE)
+
+COACHES_ADVANCED_ODDS = merge(COACHES_COMBO, ODDS, by = c("season", "team_name"), sort = FALSE)
+
+COACHES_ADVANCED_ODDS_ALL = merge(COACHES_COMBO_ALL, ODDS, by = c("season", "team_name"), sort = FALSE)
+```
+
+```{r, include = FALSE}
+#final cleaning COME BACK HERE!!!!
+#COACHES_ADVANCED_ODDS = subset(COACHES_ADVANCED_ODDS, select = -c(19,20))
+#COACHES_ADVANCED_ODDS$season = as.numeric(COACHES_ADVANCED_ODDS$season)
+COACHES_ADVANCED_ODDS = COACHES_ADVANCED_ODDS[,-63]
+#COACHES_ADVANCED_ODDS %>%
+ # mutate(previous_season_win_pct = )
+```
+
+```{r}
+#output file FINAL
+write.csv(COACHES_ADVANCED_ODDS,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Cleaning.csv", row.names = FALSE)
+write.csv(COACHES_ADVANCED_ODDS_ALL,"C:\\Users\\peytonhl\\Documents\\Fun\\NBA Data Science\\Coaches_Cleaning_ALL_HISTORY.csv", row.names = FALSE)
+```
+
